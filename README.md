@@ -1,86 +1,201 @@
-**Deploy Classification Neural Network on Serverless GPU platform of Cerebrium**
+### PyTorch to ONNX Image Classifier Pipeline
+
+This repository provides a complete workflow for exporting a PyTorch image classifier to ONNX format, including preprocessing, and running inference with ONNX Runtime. It also includes comprehensive tests to ensure correctness and consistency between PyTorch and ONNX outputs.
+
+---
+
+#### Contents
+
+- **convert_to_onnx.py**: Exports a PyTorch model (with preprocessing) to ONNX.
+- **model.py**: Loads ONNX model, preprocesses images, and runs inference.
+- **test.py**: Runs a suite of tests for PyTorch and ONNX inference, export, and error handling.
+
+---
+
+#### 1. Model Export: `convert_to_onnx.py`
+
+- **PreprocessingWrapper**: Wraps the PyTorch model to include image preprocessing (uint8 to float, resize to 224x224, normalization).
+- **Export**: Loads model weights, wraps the model, and exports to ONNX (`classifier_with_preprocessing.onnx`) with dynamic batch and image size support.
+- **Input**: Expects images as `uint8` tensors in NCHW format (batch, channels, height, width).
+- **Output**: ONNX model with preprocessing embedded, ready for direct inference on raw images.
+
+---
+
+#### 2. ONNX Inference: `model.py`
+
+- **load_image**: Loads and preprocesses an image file into the required NCHW `uint8` format.
+- **OnnxClassifier**: Loads the ONNX model and provides:
+    - `predict`: Returns raw model outputs (logits).
+    - `predict_class`: Returns the predicted class index.
+- **Example Usage**: Run the script directly to classify a sample image.
+
+---
+
+#### 3. Testing: `test.py`
+
+- **test_pytorch_forward**: Checks PyTorch model forward pass with preprocessing.
+- **test_onnx_export_and_inference**: Exports ONNX, checks model validity, and runs inference.
+- **test_consistency**: Verifies that PyTorch and ONNX outputs are numerically close.
+- **test_batch_and_dynamic_shapes**: Tests ONNX model with different batch sizes and image resolutions.
+- **test_error_handling**: Ensures the ONNX model rejects invalid input types and shapes.
+- **test_specific_image_classification**: Checks that a specific image is classified as the expected class.
+
+All tests can be run via `python test.py` (ensure required files are present).
+
+---
 
 
-You have to deploy a Machine Learning Model on Cerebrium [https://www.cerebrium.ai/].
-You have to use GitHub for the codebase.
 
-**Assignment Protocols**
-- We expect it to take ~4 hours, with an extra 15 min for clear loom explanation(s)
-    - The assessment is timeboxed at 5 hours total in a single block. So please plan accordingly
-- You can only use Python as a programming Language
-- You cannot take help from any other person
-    - But you can use google to search for references
-- Record a 5-10 mins of code walkthrough of the work you have done. You can use Loom Platform (https://www.loom.com) to record the video
-    - A live demo of each of the features mentioned below:
-        - Cerebrium platform deployment page
-        - Other scripts as required in "Deliverable" section below
-        - Show all steps of Cerebrium deployment running successfully, and what you think as a pre-requisite to trigger deployment
-    - Code overview of each of those features:
-        - Why did you implement it that way?
-        - Is there any way you would improve it?
-    - Explain what tests you have developed and why
-    - Explain what parts of the assessment are completed and what is missing?
-    - Make sure to submit the screen recording link in the submission after you are done recording
-    - Please note that the free plan on Loom only allows for videos up to 5 minutes in length. As such, you may need to record two separate 5-minute videos
+#### Usage
 
-**Cerebrium Details:**
-- You need to use custom Docker Image based deployment. Any submission which is not based on Dockerfile will be rejected.
-- This example from Cerebrium explains how to use Docker Image [https://github.com/CerebriumAI/examples/tree/master/2-advanced-concepts/5-dockerfile]
+1. **Export ONNX Model**  
+   Run `convert_to_onnx.py` to generate `classifier_with_preprocessing.onnx`.
+
+2. **Inference**  
+   Use `model.py` to classify images with the ONNX model.
+
+3. **Testing**  
+   Run `test.py` to verify the pipeline and model correctness.
+
+---
 
 
-**Model Details:**
-- Model is designed to perform classification on an input Image
-- Model will be used in production where one would expect answers within 2-3 seconds
-- PyTorch Implementation of model is present in pytorch_model.py, and weights can be downloaded from this link: https://www.dropbox.com/s/b7641ryzmkceoc9/pytorch_model_weights.pth?dl=0
-- The model is trained on ImageNet Dataset [https://www.image-net.org]
-- The input to the model is an image of size 224x224, and the output is the array with probabilities for each class.
-- The length of the output array is equal to the number of classes [1000] in the ImageNet dataset.
-- There are two images in this repo:
-    - n01440764_tench belongs to class id 0
-    - n01667114_mud_turtle belongs to class id 35
+#### File Checklist
 
-Model is trained on images with specific pre-processing steps, e.g. you need to do the following pre-processings on the image before passing it to the model. A function (preprocess_numpy) is implemented in the model class which performs the necessary pre-processing on the image, and at the end of pytorch_model.py you can see how to use the model on an image file to get inference.
-- Convert to RGB format if needed. The model accepts the image in RGB format, not in BGR. Code will never throw errors for this so keep an eye on the library you use to load image.
-- Resize to 224x224 (use bilinear interpolation)
-- Divide by 255
-- Normalize using mean values for each channel [RGB][0.485, 0.456, 0.406] and standard deviation values for each channel [RGB] [0.229, 0.224, 0.225]
-    - subtract mean and divide standard deviation per channel
+- `pytorch_model.py`: Contains the model definition (`Classifier`, `BasicBlock`).
+- `pytorch_model_weights.pth`: Trained model weights.
+- `n01667114_mud_turtle.JPEG`: Example test image.
 
-**Deliverable**
-- convert_to_onnx.py | codebase to convert the PyTorch Model to the ONNX model
-- model.py with the following classes/functionalities, make their separate classes:
-    - Onnx Model loading and prediction call
-    - Pre-processing of the Image [Sample code provided in pytorch_model.py]
-- test.py | codebase to test the code/model written. This should test everything one would expect for ML Model deployment.
-- Things needed to deploy the code to the Cerebrium
-- test_server.py | codebase to make a call to the model deployed on the Cerebrium (Note: This should test deployment not something on your local machine)
-    - This should accept the path of the image and return/print the id of the class the image belongs to
-    - And also accept a flag to run preset custom tests, something like test.py but uses deployed model.
-    - Add more tests to test the Cerebrium as a platform. Anything to monitor the deployed model.
-- Readme File | which has steps to run/use all the deliverables with proper details, such that a person who has no prior information about this repo can understand and run this easily with no blockers.
+---
 
-**Evaluation Criteria**
- - *Python* best practices
- - Completeness: Did you include all features?
- - Correctness: Does the solution (all deliverables) work in sensible, thought-out ways?
- - Maintainability: Is the code written in a clean, maintainable way?
- - Testing: Is the solution adequately tested?
- - Documentation: Is the codebase well-documented and has proper steps to run any of the deliverables?
 
-**Things which are very important and will be considered during evaluation**
-- Your test_server.py should be properly implemented, we will use that to test your final deployment.
-    - Kindly put API-Key and model api link that needs to be passed to the test_server.py, incase its not added in test_server.py and needs to be passed as arguments.
-    - If test_server.py is not runable without requesting further information from you, your submission will not be evaluated.
-- Don't deploy PyTorch Model, you need to convert the PyTorch Model to ONNX first and use that in the deployment.
-- Code Formatting and Documentation.
-- Proper use of Git.
-- Meaningful and good commits, we will monitor commit history.
+```bash
+# Export ONNX model
+python convert_to_onnx.py
 
-**Extra Points:**
-- CI pipeline to test Docker Image builds succesfully everytime we push a new commit to repo.
-- Make pre-processing steps part of Onnx File [<name_of_model>.onnx file], which needs to be done during onnx conversion, instead of implementing them in the code inside app.py.
+# Run ONNX inference
+python model.py
 
-**Note:**
-- You get 30 USD of free credits on Cerebrium on new signup.
-    - This is more than enough for this task. You would at max spend 2-3 USD from free credits.
-- In case, you add your credit/debit card on the platform (which is not needed) and some mishap occurs, and you are charged an extra amount MTailor is not accountable for that.
+# Run all tests
+python test.py
+```
+
+---
+
+### FastAPI ONNX Image Classifier Service
+
+
+
+---
+
+#### Features
+
+- **/predict** endpoint: Accepts a base64-encoded image and returns the predicted class.
+- **/health** endpoint: Simple health check for service monitoring.
+- **ONNX Runtime**: Efficient inference using a pre-exported ONNX model with preprocessing.
+- **Robust error handling**: Handles invalid input, missing fields, and model errors gracefully.
+- **Test client**: `test_server.py` for automated and manual endpoint testing.
+
+---
+
+#### File Overview
+
+- **main.py**: FastAPI server exposing `/predict` and `/health` endpoints.
+- **test_server.py**: Command-line tool for testing the deployed API, including health checks, prediction, latency, and error cases.
+
+---
+
+#### API Usage
+
+##### 1. Start the Server
+
+Make sure you have the ONNX model file (`classifier_with_preprocessing.onnx`) in the working directory.
+
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+##### 2. `/predict` Endpoint
+
+- **Method**: POST
+- **Request Body**: JSON with a single field `image` (base64-encoded image data, e.g. JPEG or PNG).
+- **Response**: JSON with the predicted class ID.
+
+**Example Request:**
+
+```json
+POST /predict
+{
+  "image": "<base64-encoded-image>"
+}
+```
+
+**Example Response:**
+
+```json
+{
+  "class_id": 35
+}
+```
+
+**Error Responses:**
+
+- 400: Missing or empty image field, invalid base64, or invalid image data.
+- 500: Model prediction failure.
+
+##### 3. `/health` Endpoint
+
+- **Method**: GET
+- **Response**: `{ "status": "ok" }` if the service is running.
+
+---
+
+#### Model Input Format
+
+- Expects images as base64-encoded strings in the request.
+- Internally, images are converted to NCHW `uint8` arrays (batch, channels, height, width).
+- Preprocessing (resize, normalization) is handled inside the ONNX model.
+
+---
+
+#### Testing the API
+
+Use the provided `test_server.py` script to test the deployed API.
+
+
+
+**Example Usage:**
+
+- **Health Check:**
+  ```bash
+  python test_server.py --preset
+  ```
+- **Predict a Single Image:**
+  ```bash
+  python test_server.py --image path/to/image.jpg
+  ```
+- **Run Preset Tests (health, latency, invalid input):**
+  ```bash
+  python test_server.py --preset
+  ```
+
+
+
+#### Error Handling
+
+- Returns clear error messages for missing/invalid input and model errors.
+- Handles invalid base64, non-image data, and wrong input shapes/types.
+
+---
+
+
+Install dependencies with:
+
+```bash
+pip install fastapi uvicorn onnxruntime numpy pillow
+```
+
+---
+
+
+
